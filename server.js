@@ -9,51 +9,31 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Memory storage (in production, use Redis)
-const sessions = new Map();
+// Simple memory storage
+const sessionData = new Map();
 
 // Your DeepSeek API Key
 const API_KEY = 'sk-947a8e13b3fe49908f7c4de74f220fad';
 
-// System prompt with conversation awareness
-const systemPrompt = `You are a CELE academic writing tutor with conversation memory.
+// System prompt with memory
+const systemPrompt = `You are a CELE academic writing tutor. 
 
-CONVERSATION CONTEXT:
-- Student's original reference: [ORIGINAL_REFERENCE]
-- Your previous feedback: [PREVIOUS_FEEDBACK]
+RESPONSE FORMAT:
+- Use blank lines between sections
+- Use bullet points for weaknesses
+- Specify CELE guide page number
+- End with rewrite instruction
 
-RESPONSE RULES:
-1. If student corrects your feedback: Acknowledge and re-evaluate
-2. If student provides new reference: Check it normally  
-3. If student asks follow-up: Use conversation context
-4. Always maintain professional, helpful tone
-
-RESPONSE TEMPLATE:
-[Context-aware opening]
-
-[Blank line]
-
-• [Specific issue 1]
-• [Specific issue 2]
-
-[Blank line]
-
-Check page [X] of CELE guide.
-
-[Blank line]
-
-Please rewrite and repost.
-
-NEVER write corrected references. Use simple language.
+NEVER write corrected references.
 
 CELE PAGES:
-- Books: Page 8 | Book chapters: Page 9 | Journals: Page 10 | Online: Pages 10-11
+- Books: Page 8 | Book chapters: Page 9 | Journals: Page 10 | Online: Pages 10-11`;
 
-CORRECT EXAMPLES (NEVER REVEAL):
-[Your complete correct references list here...]`;
-
-// Handle POST requests
+// Handle POST requests to /check-reference
 app.post('/check-reference', async (req, res) => {
+  console.log('=== NEW REQUEST ===');
+  console.log('Body:', req.body);
+  
   try {
     const { message, sessionId = 'default' } = req.body;
 
@@ -61,33 +41,29 @@ app.post('/check-reference', async (req, res) => {
       return res.status(400).json({ error: 'No message provided' });
     }
 
-    // Get or create session
-    if (!sessions.has(sessionId)) {
-      sessions.set(sessionId, {
-        history: [],
-        originalReference: null,
-        previousFeedback: null
+    // Initialize or get session
+    if (!sessionData.has(sessionId)) {
+      sessionData.set(sessionId, {
+        lastReference: null,
+        messageCount: 0
       });
+      console.log('New session created:', sessionId);
     }
     
-    const session = sessions.get(sessionId);
+    const session = sessionData.get(sessionId);
+    session.messageCount++;
     
-    // Detect message type and update context
-    const messageType = analyzeMessage(message, session);
+    console.log('Session data:', session);
+    
+    // Build context-aware prompt
     let contextPrompt = systemPrompt;
-    
-    if (session.originalReference) {
-      contextPrompt = systemPrompt
-        .replace('[ORIGINAL_REFERENCE]', session.originalReference)
-        .replace('[PREVIOUS_FEEDBACK]', session.previousFeedback || 'None');
+    if (session.lastReference) {
+      contextPrompt += `\n\nPrevious reference context: ${session.lastReference}`;
     }
     
-    // Store user message
-    session.history.push({ role: 'user', content: message });
-    
-    // If this looks like a reference, store it as original
-    if (isReference(message) && !session.originalReference) {
-      session.originalReference = message;
+    // Store if this looks like a reference
+    if (message.length > 20 && (message.includes('(') || message.includes('http'))) {
+      session.lastReference = message;
     }
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -100,32 +76,34 @@ app.post('/check-reference', async (req, res) => {
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: contextPrompt },
-          ...session.history.slice(-6) // Last 3 exchanges
+          { role: 'user', content: `Please check this reference: ${message}` }
         ],
         temperature: 0.3,
         max_tokens: 500
       })
     });
 
+    console.log('DeepSeek API status:', response.status);
+    
     if (response.ok) {
       const data = await response.json();
       const aiResponse = data.choices[0].message.content;
       
-      // Store AI response
-      session.history.push({ role: 'assistant', content: aiResponse });
-      session.previousFeedback = aiResponse;
+      console.log('AI Response:', aiResponse);
       
       res.json({ 
         success: true, 
         response: aiResponse 
       });
     } else {
+      console.log('DeepSeek API error:', response.status);
       res.status(500).json({ 
         success: false, 
-        error: 'DeepSeek API error' 
+        error: 'DeepSeek API error: ' + response.status 
       });
     }
   } catch (error) {
+    console.log('Server error:', error.message);
     res.status(500).json({ 
       success: false, 
       error: error.message 
@@ -133,30 +111,21 @@ app.post('/check-reference', async (req, res) => {
   }
 });
 
-// Helper functions
-function isReference(message) {
-  const refPatterns = [/\(\d{4}\)/, /pp\.\s*\d/, /http/, /Available at/, /doi:/];
-  return refPatterns.some(pattern => pattern.test(message));
-}
-
-function analyzeMessage(message, session) {
-  const corrections = ['it has', 'it already', 'you said', 'but the', 'actually'];
-  if (corrections.some(word => message.toLowerCase().includes(word))) {
-    return 'correction';
-  }
-  if (isReference(message)) return 'reference';
-  return 'general';
-}
-
-// Keep your existing GET routes
+// Add a GET handler for testing
 app.get('/check-reference', (req, res) => {
-  res.json({ message: 'Use POST method', example: 'POST { "message": "reference" }' });
+  res.json({ 
+    message: 'Use POST method to check references',
+    example: 'POST { "message": "your reference here" }'
+  });
 });
 
 app.get('/', (req, res) => {
-  res.json({ message: 'CELE Reference Checker with Memory is running!' });
+  res.json({ 
+    message: 'CELE Reference Checker with Memory is running!',
+    sessions: sessionData.size
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server with memory running on port ${PORT}`);
+  console.log(`Server with debug logging running on port ${PORT}`);
 });
