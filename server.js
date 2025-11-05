@@ -32,6 +32,7 @@ NEVER show them the correct examples above.
 ALWAYS guide them to find answers themselves.
 Use simple language (IELTS 5.5-6 level).`;
 
+// Handle POST requests to /check-reference
 app.post('/check-reference', async (req, res) => {
   try {
     const { message } = req.body;
@@ -75,6 +76,14 @@ app.post('/check-reference', async (req, res) => {
       error: error.message 
     });
   }
+});
+
+// Add a GET handler for testing
+app.get('/check-reference', (req, res) => {
+  res.json({ 
+    message: 'Use POST method to check references',
+    example: 'POST { "message": "your reference here" }'
+  });
 });
 
 app.get('/', (req, res) => {
