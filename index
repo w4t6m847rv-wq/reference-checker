@@ -19,26 +19,21 @@
         #send-btn { padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; }
         .thinking { display: none; text-align: center; color: #7f8c8d; margin: 8px 0; }
         .welcome-message { text-align: center; padding: 15px; background: #e3f2fd; border-radius: 10px; margin-bottom: 15px; }
-        .suggestion { background: white; border: 1px solid #3498db; color: #3498db; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 13px; margin: 2px; }
         .disclaimer { padding: 8px 15px; background: #fff3cd; color: #856404; font-size: 11px; text-align: center; border-top: 1px solid #ffeaa7; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>CELE Academic Writing Assistant</h1>
-            <p>Harvard Referencing Help - University of Nottingham</p>
+            <h1>Academic Writing Assistant</h1>
+            <p>Harvard Referencing Help</p>
         </div>
         
         <div class="chat-container" id="chat-container">
             <div class="welcome-message">
                 <h3>Welcome! 🎓</h3>
                 <p>I can help you check your Harvard references for the IWA assignment</p>
-                <div class="suggested-questions">
-                    <div class="suggestion" onclick="checkExample('book-chapter')">Check Book Chapter</div>
-                    <div class="suggestion" onclick="checkExample('book')">Check Book</div>
-                    <div class="suggestion" onclick="checkExample('journal')">Check Journal Article</div>
-                </div>
+                <p><strong>Simply paste your reference below and I'll give you feedback</strong></p>
             </div>
         </div>
         
@@ -52,23 +47,12 @@
         </div>
         
         <div class="disclaimer">
-             Citation Guide & IWA Reading List - For educational use
+             Citation Guide & IWA Reading List Assistant (beta version) - This tool may make errors, so use it critically.
         </div>
     </div>
 
     <script>
         const API_URL = 'https://reference-checker-83yl.onrender.com/check-reference';
-
-        const examples = {
-            'book-chapter': "Mattes, R. D. and Tan, S. Y. (2014) 'Obesity: The influence of the food environment on ingestive behaviours', in Bray, G. A. and Bouchard, C. (eds.) Handbook of Obesity: Epidemiology, Etiology, and Physiopathology. London: CRC Press.",
-            'book': "Eilender, E. (2016) Public health and community nutrition. New York: Momentum Press.",
-            'journal': "Caso, D. et al. (2020) Unhealthy eating and academic stress. Health Psychology Open, 7(2), 1-15."
-        };
-
-        function checkExample(type) {
-            document.getElementById('user-input').value = examples[type];
-            document.getElementById('user-input').focus();
-        }
 
         function sendMessage() {
             const input = document.getElementById('user-input');
