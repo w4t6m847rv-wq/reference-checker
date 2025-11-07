@@ -1,7 +1,7 @@
 {
-  "name": "cele-reference-checker",
+  "name": "Reference-checker",
   "version": "1.0.0",
-  "description": "CELE Academic Writing Assistant Proxy",
+  "description": "Academic Writing Assistant Proxy",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
