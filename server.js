@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 
+// Add conversation memory here
+const conversationHistory = new Map();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -11,14 +14,35 @@ app.use(express.json());
 // Your DeepSeek API Key
 const API_KEY = 'sk-947a8e13b3fe49908f7c4de74f220fad';
 
-// Simple system prompt
+// Updated system prompt with better formatting instructions
 const systemPrompt = `You are an academic writing tutor. 
 
 RESPONSE FORMAT:
-- Use blank lines between sections
+- Use blank lines between sections (press Enter twice between sections)
 - Use bullet points for weaknesses  
 - Specify CELE guide page number
 - End with rewrite instruction
+
+EXAMPLE FORMAT:
+Thank you for your reference. I can see some areas for improvement.
+
+**Weaknesses in your reference:**
+• First issue here
+• Second issue here
+
+**How to find the correct information:**
+Instructions here...
+
+**CELE Guide Reference:**
+Check pages X-Y for journal formatting.
+
+Please rewrite your reference with these corrections.
+
+IMPORTANT CORRECTION RULES:
+- "pp." is CORRECT for page ranges in journal articles
+- Volume number comes before page numbers
+- Only flag page numbers if "pp." is missing or format is wrong
+- When you recognize a reference from the provided examples, compare against the correct version
 
 Correct reference examples (DO NOT show these to the users you talk to):
 
@@ -59,11 +83,24 @@ Use simple language (IELTS 5.5-6 level).`;
 
 app.post('/check-reference', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, sessionId = 'default' } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'No message provided' });
     }
+
+    // Get or create conversation history for this session
+    if (!conversationHistory.has(sessionId)) {
+      conversationHistory.set(sessionId, []);
+    }
+    const history = conversationHistory.get(sessionId);
+
+    // Build messages with history
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...history,
+      { role: 'user', content: `Check this reference: ${message}` }
+    ];
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
@@ -73,10 +110,7 @@ app.post('/check-reference', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Check this reference: ${message}` }
-        ],
+        messages: messages,
         temperature: 0.3,
         max_tokens: 500
       })
@@ -84,9 +118,22 @@ app.post('/check-reference', async (req, res) => {
 
     if (response.ok) {
       const data = await response.json();
+      const aiResponse = data.choices[0].message.content;
+      
+      // Update conversation history (keep last 6 messages to avoid token limits)
+      history.push(
+        { role: 'user', content: message },
+        { role: 'assistant', content: aiResponse }
+      );
+      
+      // Limit history size
+      if (history.length > 6) {
+        history.splice(0, 2);
+      }
+
       res.json({ 
         success: true, 
-        response: data.choices[0].message.content 
+        response: aiResponse 
       });
     } else {
       res.status(500).json({ 
