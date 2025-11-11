@@ -23,7 +23,7 @@ const CORRECT_REFERENCES = {
     type: 'academic book'
   },
   'Mattes': { 
-    ref: 'Mattes, R.D. and Tan, S.Y. (2014) \'Obesity: The influence of the food environment on ingestive behaviours\' in Bray, G.A. and Bouchard, C. (eds.) Handbook of Obesity: Epidemiology, Etiology, and Physiopathology. London: CRC Press, pp.317-325.',
+    ref: 'Mattes, R.D. and Tan, S.Y. (2014) \'Obesity: The influence of the food environment on ingestive behaviours\' in Bray, G.A. and Bouchard, C. (eds.) Handbook of Obesity: Epidemiology, Etiology, and Physiopathology. 3rd edn. London: CRC Press, pp.317-325.',
     page: 9, // BOOK CHAPTERS are on PAGE 9
     type: 'book chapter'
   },
@@ -103,7 +103,7 @@ MINOR VARIATIONS (ignore these):
 - Capitalization differences (unless completely wrong)
 - Minor formatting variations that don't change meaning
 
-RESPONSE TEMPLATE:
+RESPONSE TEMPLATE (leave a whole blank line between each part of the response in the response template i.e. as if it were a separate paragraph):
 
 [Start with overall assessment]
 
