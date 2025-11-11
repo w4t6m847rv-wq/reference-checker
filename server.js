@@ -69,6 +69,38 @@ const CORRECT_REFERENCES = {
   }
 };
 
+// Smart italics preservation function
+function preserveItalics(text) {
+  // Comprehensive list of known titles that should be italicized
+  const knownTitles = [
+    // Books and textbooks
+    'Nutrition: Concepts & controversies',
+    'Public Health and Community Nutrition',
+    'Handbook of Obesity: Epidemiology, Etiology, and Physiopathology',
+    'Handbook of Obesity',
+    
+    // Journal names
+    'Health Psychology Open',
+    'Public health research and practice',
+    'Appetite',
+    'Journal of healthcare leadership', 
+    'American Journal of Preventive Medicine',
+    'Obesity Reviews'
+  ];
+
+  let processedText = text;
+
+  // Replace known titles with italic markers
+  knownTitles.forEach(title => {
+    // Escape special regex characters in the title
+    const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedTitle, 'gi');
+    processedText = processedText.replace(regex, `*${title}*`);
+  });
+
+  return processedText;
+}
+
 // Intelligent system prompt with ACCURATE page numbers
 const systemPrompt = `You are an expert academic reference checker. Your task is to compare student references against a database of correct references and provide accurate, helpful feedback.
 
@@ -102,6 +134,23 @@ MINOR VARIATIONS (ignore these):
 - Spacing variations
 - Capitalization differences (unless completely wrong)
 - Minor formatting variations that don't change meaning
+
+CRITICAL FORMATTING RULE: When you see these specific titles in references, you MUST preserve italics by wrapping them in asterisks:
+
+BOOKS & TEXTBOOKS:
+*Nutrition: Concepts & controversies*
+*Public Health and Community Nutrition* 
+*Handbook of Obesity: Epidemiology, Etiology, and Physiopathology*
+
+JOURNAL NAMES:
+*Health Psychology Open*
+*Public health research and practice*
+*Appetite*
+*Journal of healthcare leadership*
+*American Journal of Preventive Medicine* 
+*Obesity Reviews*
+
+When providing corrected references or examples, ALWAYS use asterisks around these specific titles.
 
 RESPONSE TEMPLATE (leave a whole blank line between each part of the response in the response template i.e. as if it were a separate paragraph):
 
@@ -150,11 +199,14 @@ function calculateSimilarity(str1, str2) {
 
 app.post('/check-reference', async (req, res) => {
   try {
-    const { message, sessionId = 'default' } = req.body;
+    let { message, sessionId = 'default' } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'No message provided' });
     }
+
+    // PRESERVE ITALICS in the user's input before processing
+    message = preserveItalics(message);
 
     // Enhanced session management
     if (!conversationHistory.has(sessionId)) {
